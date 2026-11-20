@@ -8,7 +8,7 @@
 #include <thread>
 
 class UsbHotplugWatcher {
-   public:
+  public:
     enum class Event {
         Arrived,
         Left,
@@ -27,8 +27,9 @@ class UsbHotplugWatcher {
     // False if hotplug events are not available.
     [[nodiscard]] bool is_active() const;
 
-   private:
-    static int LIBUSB_CALL on_hotplug_event(libusb_context* context, libusb_device* device, libusb_hotplug_event event, void* user_data);
+  private:
+    static int LIBUSB_CALL on_hotplug_event(libusb_context* context, libusb_device* device,
+                                            libusb_hotplug_event event, void* user_data);
     void handle_events();
 
     Callback callback_;
@@ -38,4 +39,4 @@ class UsbHotplugWatcher {
     std::thread thread_;
 };
 
-#endif  // USB_HOTPLUG_WATCHER_HPP
+#endif // USB_HOTPLUG_WATCHER_HPP

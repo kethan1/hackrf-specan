@@ -23,14 +23,14 @@ constexpr int COLOR_MAP_SAMPLES = 300;
 class MainWindow : public QMainWindow {
     Q_OBJECT
 
-   public:
+  public:
     explicit MainWindow(HackRFController* controller, QWidget* parent = nullptr);
 
     // USB hotplug notifications. Should be called on the GUI thread.
     void device_arrived();
     void device_left();
 
-   private:
+  private:
     QwtPlot* custom_plot_ = nullptr;
     QwtPlotCurve* curve_ = nullptr;
 
@@ -65,4 +65,4 @@ class MainWindow : public QMainWindow {
     void update_connection_status();
 };
 
-#endif  // MAIN_WINDOW_HPP
+#endif // MAIN_WINDOW_HPP

@@ -8,10 +8,10 @@
 #include <qwt_plot_spectrogram.h>
 
 class ThermalColorMap : public QwtLinearColorMap {
-   public:
+  public:
     ThermalColorMap();
 
     QRgb rgb(const QwtInterval& interval, double value) const;
 };
 
-#endif  // THERMAL_COLOR_MAP_HPP
+#endif // THERMAL_COLOR_MAP_HPP

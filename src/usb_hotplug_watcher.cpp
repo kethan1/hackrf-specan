@@ -11,12 +11,11 @@ namespace {
 constexpr int HACKRF_VENDOR_ID = 0x1d50;
 
 bool is_hackrf_product(uint16_t product_id) {
-    return product_id == USB_BOARD_ID_JAWBREAKER ||
-           product_id == USB_BOARD_ID_HACKRF_ONE ||
+    return product_id == USB_BOARD_ID_JAWBREAKER || product_id == USB_BOARD_ID_HACKRF_ONE ||
            product_id == USB_BOARD_ID_RAD1O;
 }
 
-}  // namespace
+} // namespace
 
 UsbHotplugWatcher::UsbHotplugWatcher(Callback callback) : callback_(std::move(callback)) {
     int rc = libusb_init(&context_);
@@ -35,10 +34,10 @@ UsbHotplugWatcher::UsbHotplugWatcher(Callback callback) : callback_(std::move(ca
 
     rc = libusb_hotplug_register_callback(
         context_,
-        static_cast<libusb_hotplug_event>(LIBUSB_HOTPLUG_EVENT_DEVICE_ARRIVED | LIBUSB_HOTPLUG_EVENT_DEVICE_LEFT),
-        static_cast<libusb_hotplug_flag>(0),
-        HACKRF_VENDOR_ID, LIBUSB_HOTPLUG_MATCH_ANY, LIBUSB_HOTPLUG_MATCH_ANY,
-        &UsbHotplugWatcher::on_hotplug_event, this, &callback_handle_);
+        static_cast<libusb_hotplug_event>(LIBUSB_HOTPLUG_EVENT_DEVICE_ARRIVED |
+                                          LIBUSB_HOTPLUG_EVENT_DEVICE_LEFT),
+        static_cast<libusb_hotplug_flag>(0), HACKRF_VENDOR_ID, LIBUSB_HOTPLUG_MATCH_ANY,
+        LIBUSB_HOTPLUG_MATCH_ANY, &UsbHotplugWatcher::on_hotplug_event, this, &callback_handle_);
 
     if (rc != LIBUSB_SUCCESS) {
         std::cerr << "Error creating a hotplug callback: " << rc << "\n";
@@ -75,7 +74,8 @@ void UsbHotplugWatcher::handle_events() {
     }
 }
 
-int LIBUSB_CALL UsbHotplugWatcher::on_hotplug_event(libusb_context* /*context*/, libusb_device* device,
+int LIBUSB_CALL UsbHotplugWatcher::on_hotplug_event(libusb_context* /*context*/,
+                                                    libusb_device* device,
                                                     libusb_hotplug_event event, void* user_data) {
     libusb_device_descriptor descriptor{};
     if (libusb_get_device_descriptor(device, &descriptor) != LIBUSB_SUCCESS ||
@@ -85,8 +85,9 @@ int LIBUSB_CALL UsbHotplugWatcher::on_hotplug_event(libusb_context* /*context*/,
 
     auto* watcher = static_cast<UsbHotplugWatcher*>(user_data);
     if (watcher->callback_) {
-        watcher->callback_(event == LIBUSB_HOTPLUG_EVENT_DEVICE_ARRIVED ? Event::Arrived : Event::Left);
+        watcher->callback_(event == LIBUSB_HOTPLUG_EVENT_DEVICE_ARRIVED ? Event::Arrived
+                                                                        : Event::Left);
     }
 
-    return 0;  // stay registered
+    return 0; // stay registered
 }

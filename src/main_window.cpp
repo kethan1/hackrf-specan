@@ -75,7 +75,8 @@ MainWindow::MainWindow(HackRFController* ctrl, QWidget* parent)
     update_connection_status();
 
     controller_->set_fft_callback([this](const FFTSweepData& data) {
-        QMetaObject::invokeMethod(this, [this, data]() { update_plot(data); }, Qt::QueuedConnection);
+        QMetaObject::invokeMethod(
+            this, [this, data]() { update_plot(data); }, Qt::QueuedConnection);
     });
 
     refresh_range_list();
@@ -86,7 +87,8 @@ void MainWindow::device_arrived() {
 }
 
 void MainWindow::device_left() {
-    // The event does not say which HackRF was unplugged, so ask the one in use whether it is still there.
+    // The event does not say which HackRF was unplugged, so ask the one in use whether it is still
+    // there.
     if (controller_->is_connected() && !controller_->is_device_responding()) {
         controller_->disconnect_device();
     }
@@ -106,7 +108,8 @@ void MainWindow::connect_to_device() {
 }
 
 void MainWindow::update_connection_status() {
-    connection_label_->setText(controller_->is_connected() ? "HackRF connected" : "HackRF disconnected");
+    connection_label_->setText(controller_->is_connected() ? "HackRF connected"
+                                                           : "HackRF disconnected");
 }
 
 void MainWindow::setup_sidebar(QWidget* sidebar) {
@@ -137,7 +140,8 @@ void MainWindow::setup_sidebar(QWidget* sidebar) {
     lna_slider->setSingleStep(1);
     lna_slider->setTickPosition(QSlider::TicksBelow);
 
-    auto* lna_value_label = new QLabel(QString::number(controller_->get_gain_state().get_lna_gain()) + " dB");
+    auto* lna_value_label =
+        new QLabel(QString::number(controller_->get_gain_state().get_lna_gain()) + " dB");
     connect(lna_slider, &QSlider::valueChanged, [this, lna_value_label](int value) {
         int gain = value * hackrf_hardware::LNA_STEP;
         controller_->set_lna_gain(gain);
@@ -161,7 +165,8 @@ void MainWindow::setup_sidebar(QWidget* sidebar) {
     vga_slider->setSingleStep(1);
     vga_slider->setTickPosition(QSlider::TicksBelow);
 
-    auto* vga_value_label = new QLabel(QString::number(controller_->get_gain_state().get_vga_gain()) + " dB");
+    auto* vga_value_label =
+        new QLabel(QString::number(controller_->get_gain_state().get_vga_gain()) + " dB");
     connect(vga_slider, &QSlider::valueChanged, [this, vga_value_label](int value) {
         int gain = value * hackrf_hardware::VGA_STEP;
         controller_->set_vga_gain(gain);
@@ -243,9 +248,7 @@ void MainWindow::refresh_range_list() {
 
     const auto ranges = controller_->get_scan_ranges();
     for (const auto& range : ranges) {
-        QString item_text = QString("%1 - %2 MHz")
-                                .arg(range.start_mhz)
-                                .arg(range.end_mhz);
+        QString item_text = QString("%1 - %2 MHz").arg(range.start_mhz).arg(range.end_mhz);
         range_list_->addItem(item_text);
     }
 }
@@ -296,29 +299,32 @@ void MainWindow::apply_scan_ranges() {
 
     controller_->restart_sweep();
 
-    QMessageBox::information(this, "Ranges Applied", "Scan ranges have been applied. The sweep will restart.");
+    QMessageBox::information(this, "Ranges Applied",
+                             "Scan ranges have been applied. The sweep will restart.");
 }
 
 void MainWindow::update_plot(const FFTSweepData& data) {
     if (!dataset_spectrum_.is_initialized()) {
         dataset_spectrum_ = DatasetSpectrum(data.bin_width_hz, data.freq_ranges_mhz);
 
-        custom_plot_->setAxisScale(QwtPlot::xBottom, data.freq_ranges_mhz.front(), data.freq_ranges_mhz.back());
+        custom_plot_->setAxisScale(QwtPlot::xBottom, data.freq_ranges_mhz.front(),
+                                   data.freq_ranges_mhz.back());
 
-        raster_data_ = new WaterfallRasterData(
-            COLOR_MAP_SAMPLES,
-            dataset_spectrum_.get_total_num_datapoints(),
-            data.bin_width_hz,
-            -90);
+        raster_data_ =
+            new WaterfallRasterData(COLOR_MAP_SAMPLES, dataset_spectrum_.get_total_num_datapoints(),
+                                    data.bin_width_hz, -90);
 
         raster_data_->setInterval(Qt::ZAxis, QwtInterval(-90, -25));
-        color_plot_->setAxisScale(QwtPlot::xBottom, 0, dataset_spectrum_.get_total_num_datapoints());
+        color_plot_->setAxisScale(QwtPlot::xBottom, 0,
+                                  dataset_spectrum_.get_total_num_datapoints());
 
         color_map_->setData(raster_data_);
     }
 
-    dataset_spectrum_.add_new_data(data.band_lower.start_hz, data.band_lower.end_hz, data.band_lower.power_db);
-    dataset_spectrum_.add_new_data(data.band_upper.start_hz, data.band_upper.end_hz, data.band_upper.power_db);
+    dataset_spectrum_.add_new_data(data.band_lower.start_hz, data.band_lower.end_hz,
+                                   data.band_lower.power_db);
+    dataset_spectrum_.add_new_data(data.band_upper.start_hz, data.band_upper.end_hz,
+                                   data.band_upper.power_db);
 
     constexpr uint64_t MHZ_TO_HZ = 1'000'000ULL;
     if (data.band_lower.start_hz == data.freq_ranges_mhz.front() * MHZ_TO_HZ) {

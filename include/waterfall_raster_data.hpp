@@ -9,7 +9,7 @@
 #include <vector>
 
 class WaterfallRasterData : public QwtMatrixRasterData {
-   private:
+  private:
     std::vector<double> m_data;
     int m_currentIndex;
     int m_maxRows;
@@ -17,7 +17,7 @@ class WaterfallRasterData : public QwtMatrixRasterData {
     int bin_width;
     double init_value;
 
-   public:
+  public:
     WaterfallRasterData(int rows, int cols, int bin_width, double init_value);
     virtual ~WaterfallRasterData();
 
@@ -27,4 +27,4 @@ class WaterfallRasterData : public QwtMatrixRasterData {
     virtual double value(double x, double y) const override;
 };
 
-#endif  // WATERFALL_RASTER_DATA_HPP
+#endif // WATERFALL_RASTER_DATA_HPP

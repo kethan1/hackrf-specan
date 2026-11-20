@@ -6,7 +6,8 @@
 #include <vector>
 
 WaterfallRasterData::WaterfallRasterData(int rows, int cols, int bin_width, double init_value)
-    : m_maxRows(rows), m_cols(cols), bin_width(bin_width), m_currentIndex(0), init_value(init_value) {
+    : m_maxRows(rows), m_cols(cols), bin_width(bin_width), m_currentIndex(0),
+      init_value(init_value) {
     m_data.resize(m_maxRows * m_cols, init_value);
 
     setInterval(Qt::XAxis, QwtInterval(0, m_cols));

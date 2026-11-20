@@ -13,7 +13,7 @@ int main(int argc, char* argv[]) {
     int ret = 0;
     {
         HackRFController controller;
-        controller.set_scan_ranges({{2000, 2700}});  // Default 2 GHz to 2.7 GHz
+        controller.set_scan_ranges({{2000, 2700}}); // Default 2 GHz to 2.7 GHz
 
         const bool connected = controller.connect_device();
 
@@ -48,7 +48,7 @@ int main(int argc, char* argv[]) {
         if (controller.is_connected()) {
             controller.stop_sweep();
         }
-    }  // the controller closes the device here, before hackrf_exit()
+    } // the controller closes the device here, before hackrf_exit()
 
     hackrf_exit();
 

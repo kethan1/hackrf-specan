@@ -9,13 +9,13 @@
 #include <vector>
 
 class DatasetSpectrum {
-   private:
+  private:
     double fft_bin_size_hz;
     std::vector<uint16_t> freq_ranges;
     std::map<uint64_t, float> spectrum;
     bool initialized = false;
 
-   public:
+  public:
     DatasetSpectrum();
     DatasetSpectrum(double fft_bin_size_hz, std::vector<uint16_t> freq_ranges);
 
@@ -29,4 +29,4 @@ class DatasetSpectrum {
     bool is_initialized() const;
 };
 
-#endif  // DATASET_SPECTRUM_HPP
+#endif // DATASET_SPECTRUM_HPP

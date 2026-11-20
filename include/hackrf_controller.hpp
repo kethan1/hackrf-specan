@@ -25,7 +25,7 @@ constexpr int LNA_MIN = 0;
 constexpr int LNA_MAX = 40;
 constexpr int LNA_STEP = 8;
 constexpr int AMP_GAIN_DB = 14;
-}  // namespace hackrf_hardware
+} // namespace hackrf_hardware
 
 struct ScanRange {
     uint16_t start_mhz;
@@ -49,7 +49,7 @@ struct FFTSweepData {
 using FFTCallback = std::function<void(const FFTSweepData& data)>;
 
 class HackRFController {
-   public:
+  public:
     HackRFController();
     ~HackRFController();
 
@@ -80,10 +80,10 @@ class HackRFController {
     bool set_scan_ranges(const std::vector<ScanRange>& ranges);
     [[nodiscard]] std::vector<ScanRange> get_scan_ranges() const;
 
-   private:
-    void update_device_gain();  // Must be called with mutex held
+  private:
+    void update_device_gain(); // Must be called with mutex held
     bool update_device_scan_ranges();
-    void cleanup_device();  // Must be called with mutex held
+    void cleanup_device(); // Must be called with mutex held
 
     hackrf_device* device_ = nullptr;
     std::unique_ptr<hackrf_sweep_state_t> sweep_state_;
@@ -94,4 +94,4 @@ class HackRFController {
     FFTCallback fft_callback_;
 };
 
-#endif  // HACKRF_CONTROLLER_HPP
+#endif // HACKRF_CONTROLLER_HPP

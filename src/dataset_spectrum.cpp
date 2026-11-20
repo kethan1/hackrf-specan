@@ -8,8 +8,7 @@
 #include <map>
 #include <vector>
 
-template <class T>
-std::vector<uint64_t> linspace(T start, T stop, int num, bool endpoint = true) {
+template <class T> std::vector<uint64_t> linspace(T start, T stop, int num, bool endpoint = true) {
     // Return an empty vector if num is non-positive.
     if (num <= 0) {
         return std::vector<T>{};
@@ -33,10 +32,7 @@ std::vector<uint64_t> linspace(T start, T stop, int num, bool endpoint = true) {
 DatasetSpectrum::DatasetSpectrum() : initialized(false) {}
 
 DatasetSpectrum::DatasetSpectrum(double fft_bin_size_hz, std::vector<uint16_t> freq_ranges)
-    : fft_bin_size_hz(fft_bin_size_hz),
-      freq_ranges(freq_ranges),
-      initialized(true) {
-}
+    : fft_bin_size_hz(fft_bin_size_hz), freq_ranges(freq_ranges), initialized(true) {}
 
 int DatasetSpectrum::get_num_datapoints() const {
     if (freq_ranges.empty()) {
@@ -57,7 +53,8 @@ int DatasetSpectrum::get_total_num_datapoints() const {
     return (freq_ranges[freq_ranges.size() - 1] - freq_ranges[0]) / (fft_bin_size_hz / 1e6);
 }
 
-void DatasetSpectrum::add_new_data(uint64_t start_freq, uint64_t end_freq, const std::vector<float>& pwr) {
+void DatasetSpectrum::add_new_data(uint64_t start_freq, uint64_t end_freq,
+                                   const std::vector<float>& pwr) {
     std::vector<uint64_t> freqs = linspace<uint64_t>(start_freq, end_freq, pwr.size(), false);
 
     for (size_t i = 0; i < pwr.size(); ++i) {

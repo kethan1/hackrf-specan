@@ -2,10 +2,9 @@
 #define HACKRF_GAIN_STATE_HPP
 
 class HackRFGainState {
-   public:
+  public:
     HackRFGainState() = default;
-    HackRFGainState(bool amp, int lna, int vga)
-        : amp_enable(amp), lna_gain(lna), vga_gain(vga) {}
+    HackRFGainState(bool amp, int lna, int vga) : amp_enable(amp), lna_gain(lna), vga_gain(vga) {}
 
     [[nodiscard]] int total_gain() const;
     [[nodiscard]] bool is_valid() const;
@@ -26,10 +25,10 @@ class HackRFGainState {
     void set_vga_gain(int gain);
     void set_lna_gain(int gain);
 
-   private:
+  private:
     bool amp_enable = false;
     int vga_gain = 0;
     int lna_gain = 0;
 };
 
-#endif  // HACKRF_GAIN_STATE_HPP
+#endif // HACKRF_GAIN_STATE_HPP
