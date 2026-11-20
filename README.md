@@ -1,1 +1,1 @@
-# HackRF Qt Spectrum Analyzer
+# HackRF Specan
