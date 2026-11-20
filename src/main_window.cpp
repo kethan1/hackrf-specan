@@ -83,8 +83,8 @@ void MainWindow::setup_sidebar(QWidget* sidebar) {
     // AMP Enable
     auto* amp_check_box = new QCheckBox("AMP (+14 dB)");
     amp_check_box->setChecked(controller_->get_gain_state().get_amp_enable());
-    connect(amp_check_box, &QCheckBox::stateChanged, [this](int state) {
-        controller_->set_amp_enable(state == Qt::Checked);
+    connect(amp_check_box, &QCheckBox::toggled, [this](bool checked) {
+        controller_->set_amp_enable(checked);
         update_total_gain();
     });
     gain_layout->addWidget(amp_check_box);

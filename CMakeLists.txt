@@ -1,14 +1,13 @@
-cmake_minimum_required(VERSION 3.12)
+cmake_minimum_required(VERSION 3.21)
 project(hackrf-qt-spectrum-analyzer)
-
-cmake_policy(SET CMP0074 NEW)
-cmake_policy(SET CMP0075 NEW)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED on)
 set(CMAKE_CXX_EXTENSIONS off)
 
-find_package(Qt5 REQUIRED COMPONENTS Core Gui Widgets OpenGL Concurrent Svg PrintSupport)
+set(QT_COMPONENTS Core Gui Widgets OpenGL OpenGLWidgets Concurrent Svg PrintSupport)
+find_package(Qt6 REQUIRED COMPONENTS ${QT_COMPONENTS})
+list(TRANSFORM QT_COMPONENTS PREPEND Qt6:: OUTPUT_VARIABLE QT_LIBRARIES)
 
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
@@ -21,29 +20,19 @@ include(FindLibUSB)
 
 # Check for libraries
 if (NOT LIBHACKRF_INCLUDE_DIR OR NOT LIBHACKRF_LIBRARIES)
-    message(FATAL_ERROR "Could not find HackRF libraries. Please make sure FindLibHackRF.cmake is available.")
+  message(FATAL_ERROR "Could not find HackRF library.")
 endif()
 
 if (NOT LIBUSB_INCLUDE_DIR OR NOT LIBUSB_LIBRARIES)
-    message(FATAL_ERROR "Could not find libusb libraries. Please make sure FindLibUSB.cmake is available.")
+  message(FATAL_ERROR "Could not find libusb library.")
 endif()
 
-add_subdirectory(libs/hackrf_sweeper EXCLUDE_FROM_ALL)
-
-set(qwt_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/libs/qwt)
-
-file(GLOB QWT_SOURCES ${qwt_SOURCE_DIR}/src/*.cpp)
-file(GLOB QWT_HEADERS ${qwt_SOURCE_DIR}/src/*.h)
-file(GLOB QWT_CLASS_HEADERS ${qwt_SOURCE_DIR}/classincludes/*)
-
-add_library(qwt ${QWT_SOURCES})
-
-target_include_directories(qwt PUBLIC ${qwt_SOURCE_DIR}/src/ ${qwt_SOURCE_DIR}/classincludes/)
-target_link_libraries(qwt PUBLIC Qt5::Core Qt5::Gui Qt5::Widgets Qt5::OpenGL Qt5::Concurrent Qt5::Svg Qt5::PrintSupport)
+# Vendored dependencies: defines the hackrf_sweeper and qwt targets
+add_subdirectory(libs)
 
 file(GLOB source_list "src/*.cpp" "include/*.hpp")
 
 add_executable(${PROJECT_NAME} ${source_list})
 
-target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} ${LIBHACKRF_INCLUDE_DIR} ${LIBUSB_INCLUDE_DIR} libs/hackrf_sweeper/include include)
-target_link_libraries(${PROJECT_NAME} PRIVATE hackrf_sweeper Qt5::Core Qt5::Gui Qt5::Widgets qwt ${LIBHACKRF_LIBRARIES} ${LIBUSB_LIBRARIES})
+target_include_directories(${PROJECT_NAME} PRIVATE ${PROJECT_SOURCE_DIR}/include ${LIBUSB_INCLUDE_DIR})
+target_link_libraries(${PROJECT_NAME} PRIVATE hackrf_sweeper qwt Qt6::Core Qt6::Gui Qt6::Widgets ${LIBHACKRF_LIBRARIES} ${LIBUSB_LIBRARIES})
