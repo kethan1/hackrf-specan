@@ -59,8 +59,10 @@ class HackRFController {
     HackRFController(HackRFController&&) = delete;
     HackRFController& operator=(HackRFController&&) = delete;
 
-    [[nodiscard]] bool is_connected() const;
     bool connect_device();
+    void disconnect_device();
+    [[nodiscard]] bool is_connected() const;
+    [[nodiscard]] bool is_device_responding() const;
 
     void start_sweep();
     void stop_sweep();

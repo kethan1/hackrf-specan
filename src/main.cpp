@@ -1,92 +1,54 @@
-#include <libusb-1.0/libusb.h>
-
 #include <QApplication>
-#include <atomic>
-#include <chrono>
-#include <iostream>
-#include <thread>
+#include <QMetaObject>
 
 #include "hackrf_controller.hpp"
 #include "main_window.hpp"
-
-using namespace std::chrono_literals;
-
-constexpr int HACKRF_VENDOR_ID = 0x1d50;
-constexpr auto HOTPLUG_DELAY = 200ms;
-
-int hotplug_callback(struct libusb_context* /*ctx*/, struct libusb_device* /*dev*/,
-                     libusb_hotplug_event /*event*/, void* user_data) {
-    auto* controller = static_cast<HackRFController*>(user_data);
-
-    std::this_thread::sleep_for(HOTPLUG_DELAY);
-
-    controller->connect_device();
-    controller->start_sweep();
-    return 0;
-}
+#include "usb_hotplug_watcher.hpp"
 
 int main(int argc, char* argv[]) {
+    QApplication app(argc, argv);
+
     hackrf_init();
 
-    HackRFController controller;
-    controller.set_scan_ranges({{2000, 2700}});  // Default 2 GHz to 2.7 GHz
+    int ret = 0;
+    {
+        HackRFController controller;
+        controller.set_scan_ranges({{2000, 2700}});  // Default 2 GHz to 2.7 GHz
 
-    if (controller.connect_device()) {
-        controller.start_sweep();
+        const bool connected = controller.connect_device();
 
-        HackRFGainState gain_state{false, 24, 0};
-        controller.set_gain_state(gain_state);
-    }
+        // Set even without a device, so that it also applies to one that is plugged in later.
+        controller.set_gain_state(HackRFGainState{false, 24, 0});
 
-    libusb_hotplug_callback_handle callback_handle{};
-    libusb_context* libusb_ctx = nullptr;
-    int rc = libusb_init(&libusb_ctx);
-
-    if (rc != LIBUSB_SUCCESS) {
-        std::cerr << "Failed to initialize libusb: " << rc << "\n";
-    } else {
-        rc = libusb_hotplug_register_callback(
-            libusb_ctx,
-            LIBUSB_HOTPLUG_EVENT_DEVICE_ARRIVED,
-            0, HACKRF_VENDOR_ID, USB_BOARD_ID_HACKRF_ONE, LIBUSB_HOTPLUG_MATCH_ANY,
-            hotplug_callback, &controller, &callback_handle);
-
-        if (rc != LIBUSB_SUCCESS) {
-            std::cerr << "Error creating a hotplug callback: " << rc << "\n";
-            libusb_hotplug_deregister_callback(libusb_ctx, callback_handle);
-            libusb_exit(libusb_ctx);
-            libusb_ctx = nullptr;
+        if (connected) {
+            controller.start_sweep();
         }
-    }
 
-    std::atomic_bool libusb_running{libusb_ctx != nullptr};
-    std::thread libusb_refresh_events;
-    if (libusb_ctx) {
-        libusb_refresh_events = std::thread([&libusb_running, libusb_ctx]() {
-            while (libusb_running.load(std::memory_order_relaxed)) {
-                libusb_handle_events_completed(libusb_ctx, nullptr);
-            }
+        MainWindow main_window(&controller);
+
+        // Declared after the window so that it is destroyed first and stops sending it events.
+        UsbHotplugWatcher hotplug_watcher([&main_window](UsbHotplugWatcher::Event event) {
+            // This runs on the libusb thread: only pass the event on to the GUI thread.
+            QMetaObject::invokeMethod(
+                &main_window,
+                [&main_window, event]() {
+                    if (event == UsbHotplugWatcher::Event::Arrived) {
+                        main_window.device_arrived();
+                    } else {
+                        main_window.device_left();
+                    }
+                },
+                Qt::QueuedConnection);
         });
-    }
 
-    QApplication app(argc, argv);
-    MainWindow main_window(&controller);
-    main_window.showMaximized();
+        main_window.showMaximized();
 
-    int ret = app.exec();
+        ret = app.exec();
 
-    if (libusb_ctx) {
-        libusb_running.store(false, std::memory_order_relaxed);
-        if (libusb_refresh_events.joinable()) {
-            libusb_refresh_events.join();
+        if (controller.is_connected()) {
+            controller.stop_sweep();
         }
-        libusb_hotplug_deregister_callback(libusb_ctx, callback_handle);
-        libusb_exit(libusb_ctx);
-    }
-
-    if (controller.is_connected()) {
-        controller.stop_sweep();
-    }
+    }  // the controller closes the device here, before hackrf_exit()
 
     hackrf_exit();
 

@@ -3,12 +3,10 @@
 #include <libhackrf/hackrf.h>
 
 #include <cstdint>
-#include <functional>
 #include <iostream>
 #include <memory>
 #include <mutex>
 #include <vector>
-#include <thread>
 
 #include "hackrf_gain_state.hpp"
 
@@ -92,11 +90,6 @@ HackRFController::~HackRFController() {
     cleanup_device();
 }
 
-bool HackRFController::is_connected() const {
-    std::lock_guard<std::mutex> lock(mutex_);
-    return device_ != nullptr;
-}
-
 bool HackRFController::connect_device() {
     std::unique_lock<std::mutex> lock(mutex_);
 
@@ -152,6 +145,31 @@ bool HackRFController::connect_device() {
     return true;
 }
 
+void HackRFController::disconnect_device() {
+    stop_sweep();
+
+    std::lock_guard<std::mutex> lock(mutex_);
+    cleanup_device();
+}
+
+bool HackRFController::is_connected() const {
+    std::lock_guard<std::mutex> lock(mutex_);
+    return device_ != nullptr;
+}
+
+bool HackRFController::is_device_responding() const {
+    std::unique_lock<std::mutex> lock(mutex_);
+    hackrf_device* device = device_;
+    lock.unlock();
+
+    if (!device) {
+        return false;
+    }
+
+    uint8_t board_id = 0;
+    return hackrf_board_id_read(device, &board_id) == HACKRF_SUCCESS;
+}
+
 void HackRFController::start_sweep() {
     std::unique_lock<std::mutex> lock(mutex_);
 
@@ -200,9 +218,7 @@ void HackRFController::set_amp_enable(bool enable) noexcept {
 }
 
 HackRFGainState HackRFController::get_gain_state() const {
-    std::unique_lock<std::mutex> lock(mutex_);
-    lock.unlock();
-
+    std::lock_guard<std::mutex> lock(mutex_);
     return gain_state_;
 }
 

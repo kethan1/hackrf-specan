@@ -13,12 +13,16 @@
 #include <QSlider>
 #include <QSpinBox>
 #include <QSplitter>
+#include <QStatusBar>
+#include <QTimer>
 #include <QVBoxLayout>
 #include <QVector>
 #include <QWidget>
-#include <iostream>
 
 #include "thermal_color_map.hpp"
+
+// Delay before a plugged-in HackRF can be opened.
+constexpr int HOTPLUG_DELAY_MS = 200;
 
 MainWindow::MainWindow(HackRFController* ctrl, QWidget* parent)
     : QMainWindow(parent), controller_(ctrl) {
@@ -66,11 +70,43 @@ MainWindow::MainWindow(HackRFController* ctrl, QWidget* parent)
     main_layout->addWidget(splitter);
     setCentralWidget(central_widget);
 
+    connection_label_ = new QLabel();
+    statusBar()->addPermanentWidget(connection_label_);
+    update_connection_status();
+
     controller_->set_fft_callback([this](const FFTSweepData& data) {
         QMetaObject::invokeMethod(this, [this, data]() { update_plot(data); }, Qt::QueuedConnection);
     });
 
     refresh_range_list();
+}
+
+void MainWindow::device_arrived() {
+    QTimer::singleShot(HOTPLUG_DELAY_MS, this, &MainWindow::connect_to_device);
+}
+
+void MainWindow::device_left() {
+    // The event does not say which HackRF was unplugged, so ask the one in use whether it is still there.
+    if (controller_->is_connected() && !controller_->is_device_responding()) {
+        controller_->disconnect_device();
+    }
+
+    update_connection_status();
+}
+
+void MainWindow::connect_to_device() {
+    // A second HackRF may have been plugged in: a device that is working is left alone.
+    const bool device_in_use = controller_->is_connected() && controller_->is_device_responding();
+
+    if (!device_in_use && controller_->connect_device()) {
+        controller_->start_sweep();
+    }
+
+    update_connection_status();
+}
+
+void MainWindow::update_connection_status() {
+    connection_label_->setText(controller_->is_connected() ? "HackRF connected" : "HackRF disconnected");
 }
 
 void MainWindow::setup_sidebar(QWidget* sidebar) {
