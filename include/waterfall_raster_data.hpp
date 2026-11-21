@@ -14,11 +14,11 @@ class WaterfallRasterData : public QwtMatrixRasterData {
     int m_currentIndex;
     int m_maxRows;
     int m_cols;
-    int bin_width;
+    double bin_width;
     double init_value;
 
   public:
-    WaterfallRasterData(int rows, int cols, int bin_width, double init_value);
+    WaterfallRasterData(int rows, int cols, double bin_width, double init_value);
     virtual ~WaterfallRasterData();
 
     void addRow(QVector<double> newRow);

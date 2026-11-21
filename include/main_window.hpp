@@ -13,6 +13,7 @@
 #include <QMainWindow>
 #include <QPushButton>
 #include <QSpinBox>
+#include <vector>
 
 #include "dataset_spectrum.hpp"
 #include "hackrf_controller.hpp"
@@ -32,7 +33,7 @@ class MainWindow : public QMainWindow {
 
   private:
     QwtPlot* custom_plot_ = nullptr;
-    QwtPlotCurve* curve_ = nullptr;
+    std::vector<QwtPlotCurve*> curves_;
 
     QwtPlot* color_plot_ = nullptr;
     QwtPlotSpectrogram* color_map_ = nullptr;

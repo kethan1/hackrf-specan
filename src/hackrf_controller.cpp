@@ -2,6 +2,7 @@
 
 #include <libhackrf/hackrf.h>
 
+#include <algorithm>
 #include <cstdint>
 #include <iostream>
 #include <memory>
@@ -34,6 +35,28 @@ std::vector<uint16_t> build_freq_ranges(const hackrf_sweep_state_t* state) {
         ranges.push_back(state->frequencies[i * 2 + 1]);
     }
     return ranges;
+}
+
+constexpr int TUNE_STEP_MHZ = TUNE_STEP;
+
+int swept_end_mhz(const ScanRange& range) {
+    const int steps = 1 + (range.end_mhz - range.start_mhz - 1) / TUNE_STEP_MHZ;
+    return range.start_mhz + steps * TUNE_STEP_MHZ;
+}
+
+std::vector<ScanRange> sort_and_merge(std::vector<ScanRange> ranges) {
+    std::sort(ranges.begin(), ranges.end(),
+              [](const ScanRange& a, const ScanRange& b) { return a.start_mhz < b.start_mhz; });
+
+    std::vector<ScanRange> merged;
+    for (const ScanRange& range : ranges) {
+        if (!merged.empty() && range.start_mhz <= swept_end_mhz(merged.back())) {
+            merged.back().end_mhz = std::max(merged.back().end_mhz, range.end_mhz);
+        } else {
+            merged.push_back(range);
+        }
+    }
+    return merged;
 }
 
 extern "C" {
@@ -149,16 +172,14 @@ bool HackRFController::is_connected() const {
 }
 
 bool HackRFController::is_device_responding() const {
-    std::unique_lock<std::mutex> lock(mutex_);
-    hackrf_device* device = device_;
-    lock.unlock();
+    std::lock_guard<std::mutex> lock(mutex_);
 
-    if (!device) {
+    if (!device_) {
         return false;
     }
 
     uint8_t board_id = 0;
-    return hackrf_board_id_read(device, &board_id) == HACKRF_SUCCESS;
+    return hackrf_board_id_read(device_, &board_id) == HACKRF_SUCCESS;
 }
 
 void HackRFController::start_sweep() {
@@ -167,6 +188,10 @@ void HackRFController::start_sweep() {
     if (!device_ || !sweep_state_) {
         return;
     }
+
+    // hackrf_sweep_stop() leaves these flags set and the library never clears them. Without this,
+    // a sweep that is started again discards every block.
+    sweep_state_->flags &= ~(SWEEP_STATE_EXITING | SWEEP_STATE_SWEEP_STARTED);
 
     int ret = hackrf_sweep_start(sweep_state_.get(), 0); // 0 = infinite sweep
     if (ret != HACKRF_SUCCESS) {
@@ -180,7 +205,7 @@ void HackRFController::start_sweep() {
 void HackRFController::stop_sweep() {
     std::lock_guard<std::mutex> lock(mutex_);
 
-    if (!sweep_state_ || !device_) {
+    if (!sweep_state_ || !device_ || !sweeping_) {
         return;
     }
 
@@ -189,6 +214,11 @@ void HackRFController::stop_sweep() {
     if (ret != HACKRF_SUCCESS) {
         std::cerr << "Failed to stop sweep: " << ret << "\n";
         return;
+    }
+
+    ret = hackrf_stop_rx(device_);
+    if (ret != HACKRF_SUCCESS) {
+        std::cerr << "Failed to stop receiving: " << ret << "\n";
     }
 
     sweeping_ = false;
@@ -251,12 +281,12 @@ void HackRFController::cleanup_device() {
 }
 
 void HackRFController::set_fft_callback(FFTCallback callback) {
-    std::lock_guard<std::mutex> lock(mutex_);
+    std::lock_guard<std::mutex> lock(callback_mutex_);
     fft_callback_ = std::move(callback);
 }
 
 FFTCallback HackRFController::get_fft_callback() const {
-    std::lock_guard<std::mutex> lock(mutex_);
+    std::lock_guard<std::mutex> lock(callback_mutex_);
     return fft_callback_;
 }
 
@@ -279,12 +309,19 @@ bool HackRFController::set_scan_ranges(const std::vector<ScanRange>& ranges) {
         }
     }
 
+    if (ranges.size() > MAX_SWEEP_RANGES) {
+        std::cerr << "Too many scan ranges: the HackRF sweeps at most " << MAX_SWEEP_RANGES << "\n";
+        return false;
+    }
+
     scan_ranges_ = ranges;
 
-    return update_device_scan_ranges();
+    return true;
 }
 
 bool HackRFController::update_device_scan_ranges() {
+    scan_ranges_ = sort_and_merge(scan_ranges_);
+
     std::vector<uint16_t> freq_ranges;
     freq_ranges.reserve(scan_ranges_.size() * 2);
 
@@ -313,19 +350,10 @@ std::vector<ScanRange> HackRFController::get_scan_ranges() const {
 void HackRFController::restart_sweep() {
     stop_sweep();
 
-    std::lock_guard<std::mutex> lock(mutex_);
-
-    if (!device_ || !sweep_state_) {
-        return;
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        update_device_scan_ranges();
     }
 
-    update_device_scan_ranges();
-
-    int ret = hackrf_sweep_start(sweep_state_.get(), 0);
-    if (ret != HACKRF_SUCCESS) {
-        std::cerr << "Failed to restart sweep: " << ret << "\n";
-        return;
-    }
-
-    sweeping_ = true;
+    start_sweep();
 }

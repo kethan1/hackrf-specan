@@ -1,13 +1,15 @@
 #include "waterfall_raster_data.hpp"
 
 #include <QtGlobal>
+#include <algorithm>
+#include <cmath>
 #include <iostream>
 #include <map>
 #include <vector>
 
-WaterfallRasterData::WaterfallRasterData(int rows, int cols, int bin_width, double init_value)
-    : m_maxRows(rows), m_cols(cols), bin_width(bin_width), m_currentIndex(0),
-      init_value(init_value) {
+WaterfallRasterData::WaterfallRasterData(int rows, int cols, double bin_width, double init_value)
+    : m_maxRows(std::max(rows, 0)), m_cols(std::max(cols, 0)), bin_width(bin_width),
+      m_currentIndex(0), init_value(init_value) {
     m_data.resize(m_maxRows * m_cols, init_value);
 
     setInterval(Qt::XAxis, QwtInterval(0, m_cols));
@@ -38,7 +40,12 @@ void WaterfallRasterData::addRow(std::map<uint64_t, float> newRow) {
     QVector<double> newRowVector(m_cols, init_value);
 
     for (const auto& [freq, power] : newRow) {
-        newRowVector[(freq - start_freq) / bin_width] = power;
+        // Rounded with the exact bin width. Truncating the bin width to whole Hz makes the column
+        // creep upwards by one for every 2.5 GHz of span, past the end of the row.
+        const long long col = std::llround((freq - start_freq) / bin_width);
+        if (col >= 0 && col < m_cols) {
+            newRowVector[static_cast<int>(col)] = power;
+        }
     }
 
     addRow(newRowVector);

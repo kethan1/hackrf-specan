@@ -42,10 +42,6 @@ MainWindow::MainWindow(HackRFController* ctrl, QWidget* parent)
     custom_plot_->setAxisTitle(QwtPlot::yLeft, "Power (dB)");
     custom_plot_->setAxisScale(QwtPlot::yLeft, -110, 20);
 
-    curve_ = new QwtPlotCurve();
-    curve_->setTitle("Sweep Data");
-    curve_->attach(custom_plot_);
-
     plot_layout->addWidget(custom_plot_);
 
     color_plot_ = new QwtPlot();
@@ -295,20 +291,32 @@ void MainWindow::remove_selected_range() {
 }
 
 void MainWindow::apply_scan_ranges() {
-    dataset_spectrum_ = DatasetSpectrum();
-
     controller_->restart_sweep();
+
+    refresh_range_list();
 
     QMessageBox::information(this, "Ranges Applied",
                              "Scan ranges have been applied. The sweep will restart.");
 }
 
 void MainWindow::update_plot(const FFTSweepData& data) {
-    if (!dataset_spectrum_.is_initialized()) {
+    if (!dataset_spectrum_.is_initialized() ||
+        data.freq_ranges_mhz != dataset_spectrum_.get_freq_ranges()) {
         dataset_spectrum_ = DatasetSpectrum(data.bin_width_hz, data.freq_ranges_mhz);
 
         custom_plot_->setAxisScale(QwtPlot::xBottom, data.freq_ranges_mhz.front(),
                                    data.freq_ranges_mhz.back());
+
+        for (QwtPlotCurve* curve : curves_) {
+            delete curve; // also detaches it from the plot
+        }
+        curves_.clear();
+        for (int range = 0; range < dataset_spectrum_.get_num_ranges(); ++range) {
+            auto* curve = new QwtPlotCurve();
+            curve->setTitle("Sweep Data");
+            curve->attach(custom_plot_);
+            curves_.push_back(curve);
+        }
 
         raster_data_ =
             new WaterfallRasterData(COLOR_MAP_SAMPLES, dataset_spectrum_.get_total_num_datapoints(),
@@ -328,10 +336,10 @@ void MainWindow::update_plot(const FFTSweepData& data) {
 
     constexpr uint64_t MHZ_TO_HZ = 1'000'000ULL;
     if (data.band_lower.start_hz == data.freq_ranges_mhz.front() * MHZ_TO_HZ) {
-        const QVector<double> freq_vec = dataset_spectrum_.get_frequency_array();
-        const QVector<double> pwr_vec = dataset_spectrum_.get_power_array();
-
-        curve_->setSamples(freq_vec, pwr_vec);
+        for (int range = 0; range < dataset_spectrum_.get_num_ranges(); ++range) {
+            curves_[range]->setSamples(dataset_spectrum_.get_frequency_array(range),
+                                       dataset_spectrum_.get_power_array(range));
+        }
         custom_plot_->replot();
 
         raster_data_->addRow(dataset_spectrum_.get_spectrum());

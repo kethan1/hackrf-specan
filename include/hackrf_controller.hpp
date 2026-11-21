@@ -82,7 +82,7 @@ class HackRFController {
 
   private:
     void update_device_gain(); // Must be called with mutex held
-    bool update_device_scan_ranges();
+    bool update_device_scan_ranges();  // ust be called with mutex held
     void cleanup_device(); // Must be called with mutex held
 
     hackrf_device* device_ = nullptr;
@@ -91,6 +91,8 @@ class HackRFController {
     std::vector<ScanRange> scan_ranges_;
     bool sweeping_ = false;
     mutable std::mutex mutex_;
+
+    mutable std::mutex callback_mutex_;
     FFTCallback fft_callback_;
 };
 
